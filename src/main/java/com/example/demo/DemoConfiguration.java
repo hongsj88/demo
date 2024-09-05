@@ -77,8 +77,8 @@ public class DemoConfiguration {
                             @Override
                             public RepeatStatus doInIteration(RepeatContext repeatContext) throws Exception {
                                 System.out.println("repeatTemplate is testing");
-                                throw new RuntimeException("Exception is occurred");
-//                                return RepeatStatus.CONTINUABLE;
+//                                throw new RuntimeException("Exception is occurred");
+                                return RepeatStatus.CONTINUABLE;
                             }
                         });
 
