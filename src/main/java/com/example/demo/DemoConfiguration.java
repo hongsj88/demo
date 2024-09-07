@@ -39,26 +39,27 @@ public class DemoConfiguration {
                     @Override
                     public String read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
                         i++;
-                        if (i == 1){
-                            throw new IllegalAccessException("this exception is skipped");
+                        if (i == 3){
+                            throw new SkippableException("this exception is skipped");
                         }
-                        return i > 3 ? null : "item" +i;
+                        System.out.println("ItemReader : " + i);
+                        return i > 20 ? null : String.valueOf(i);
                     }
                 })
-                .processor(new ItemProcessor<String, String>() {
-                    @Override
-                    public String process(String s) throws Exception {
-                        throw new IllegalStateException("this exception is retried");
-//                        return null;
-                    }
-                })
-                .writer(items -> System.out.println(items))
+                .processor(itemProcess())
+                .writer(itemWriter())
                 .faultTolerant()
-                .skip(IllegalAccessException.class)
+                .skip(SkippableException.class)
                 .skipLimit(2)
-                .retry(IllegalStateException.class)
-                .retryLimit(2)
                 .build();
+    }
+
+    private ItemProcessor<? super String, String> itemProcess() {
+        return new SkipItemProcessor();
+    }
+
+    private ItemWriter<? super String> itemWriter() {
+        return new SkipItemWriter();
     }
 
     @Bean
