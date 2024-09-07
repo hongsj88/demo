@@ -6,11 +6,14 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.step.skip.LimitCheckingItemSkipPolicy;
+import org.springframework.batch.core.step.skip.SkipPolicy;
 import org.springframework.batch.item.*;
-import org.springframework.batch.repeat.exception.ExceptionHandler;
-import org.springframework.batch.repeat.exception.SimpleLimitExceptionHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 @RequiredArgsConstructor
@@ -49,8 +52,11 @@ public class DemoConfiguration {
                 .processor(itemProcess())
                 .writer(itemWriter())
                 .faultTolerant()
-                .skip(SkippableException.class)
-                .skipLimit(2)
+//                .skip(SkippableException.class)
+//                .skipLimit(2)
+//                .skipPolicy(LimitCheckingItemSkipPolicy()) // 두번째
+//                .skipPolicy(new AlwaysSkipItemSkipPolicy()) // 세번째 무조건 실행
+                .noSkip(NoSkippableException.class)
                 .build();
     }
 
@@ -63,8 +69,12 @@ public class DemoConfiguration {
     }
 
     @Bean
-    public ExceptionHandler simpleLimitExceptionHandler(){
-        return new SimpleLimitExceptionHandler(3);
+    public SkipPolicy LimitCheckingItemSkipPolicy(){
+
+        Map<Class<? extends Throwable>, Boolean> exceptionClass = new HashMap<>();
+        exceptionClass.put(SkippableException.class, true);
+        LimitCheckingItemSkipPolicy limitCheckingItemSkipPolicy = new LimitCheckingItemSkipPolicy(4, exceptionClass);
+        return limitCheckingItemSkipPolicy;
     }
 
 }
