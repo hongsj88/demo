@@ -11,7 +11,9 @@ import org.springframework.batch.item.support.ListItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.RetryPolicy;
+import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
+import org.springframework.retry.support.RetryTemplate;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,13 +41,13 @@ public class RetryConfiguration {
     @Bean
     public Step step1() throws Exception {
         return stepBuilderFactory.get("step1")
-                .<String,String>chunk(5)
+                .<String,Customer>chunk(5)
                 .reader(reader())
-                .processor(processor())
+                .processor(itemProcessor())
                 .writer(items ->items.forEach(item-> System.out.println(item)))
                 .faultTolerant()
-                .skip(RetryableException.class)
-                .skipLimit(2)
+//                .skip(RetryableException.class)
+//                .skipLimit(2)
 //                .retry(RetryableException.class)
 //                .retryLimit(2)
                 .retryPolicy(retryPolicy())
@@ -53,9 +55,14 @@ public class RetryConfiguration {
     }
 
     @Bean
-    public  ItemProcessor<? super String, String> processor() {
+    public ItemProcessor<String,Customer> itemProcessor(){
+        return new RetryItemProcessor2();
+    }
 
-        return new RetryItemProcessor();
+    @Bean
+    public  ItemProcessor<? super String, Customer> processor() {
+
+        return new RetryItemProcessor2();
     }
 
     @Bean
@@ -76,5 +83,22 @@ public class RetryConfiguration {
         return simpleRetryPolicy;
     }
 
+    @Bean
+    public RetryTemplate retryTemplate() {
+        Map<Class<? extends Throwable>,Boolean> exceptionClasses = new HashMap<>();
+        exceptionClasses.put(RetryableException.class, true);
+
+        FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
+        backOffPolicy.setBackOffPeriod(2000);
+
+        SimpleRetryPolicy simpleRetryPolicy = new SimpleRetryPolicy(2,exceptionClasses);
+
+        RetryTemplate retryTemplate = new RetryTemplate();
+        retryTemplate.setRetryPolicy(simpleRetryPolicy);
+        retryTemplate.setBackOffPolicy(backOffPolicy);
+
+        return retryTemplate;
+
+    }
 
 }
