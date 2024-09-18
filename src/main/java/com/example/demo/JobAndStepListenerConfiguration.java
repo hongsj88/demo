@@ -1,7 +1,6 @@
 package com.example.demo;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.core.ItemReadListener;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -14,6 +13,7 @@ import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.batch.item.support.builder.SynchronizedItemStreamReaderBuilder;
+import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
@@ -24,11 +24,12 @@ import javax.sql.DataSource;
 
 @Configuration
 @RequiredArgsConstructor
-public class SynchronizedConfiguration {
+public class JobAndStepListenerConfiguration {
 
 
     private final JobBuilderFactory jobBuilderFactory;
     private final StepBuilderFactory stepBuilderFactory;
+    private final CustomStepExecutionListener customStepExecutionListener;
     private final DataSource dataSource;
 
 
@@ -37,32 +38,26 @@ public class SynchronizedConfiguration {
         return jobBuilderFactory.get("batchJob")
                 .incrementer(new RunIdIncrementer())
                 .start(step1())
+                .next(step2())
+                .listener(new CustomJobExecutionListener())
+//                .listener(new CustomAnnotationJobExecutionListener())
                 .build();
     }
 
     @Bean
     public Step step1() {
         return stepBuilderFactory.get("step1")
-                .<Customer, Customer>chunk(100)
-                .reader(customerItemReader())
-                .listener(new ItemReadListener<Customer>() {
-                    @Override
-                    public void beforeRead() {
+                .tasklet(((stepContribution, chunkContext) -> RepeatStatus.FINISHED))
+                .listener(customStepExecutionListener)
+                .build();
 
-                    }
+    }
 
-                    @Override
-                    public void afterRead(Customer customer) {
-                        System.out.println("Thread : " + Thread.currentThread() + ", customer.getId() : "+ customer.getId());
-                    }
-
-                    @Override
-                    public void onReadError(Exception e) {
-
-                    }
-                })
-                .writer(customItemWriter())
-                .taskExecutor(taskExecutor())
+    @Bean
+    public Step step2() {
+        return stepBuilderFactory.get("step2")
+                .tasklet(((stepContribution, chunkContext) -> RepeatStatus.FINISHED))
+                .listener(customStepExecutionListener)
                 .build();
 
     }
