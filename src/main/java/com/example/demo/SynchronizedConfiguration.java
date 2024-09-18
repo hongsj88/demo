@@ -1,4 +1,3 @@
-/*
 package com.example.demo;
 
 import lombok.RequiredArgsConstructor;
@@ -13,6 +12,8 @@ import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourc
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcCursorItemReaderBuilder;
+import org.springframework.batch.item.support.SynchronizedItemStreamReader;
+import org.springframework.batch.item.support.builder.SynchronizedItemStreamReaderBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
@@ -23,7 +24,7 @@ import javax.sql.DataSource;
 
 @Configuration
 @RequiredArgsConstructor
-public class NotSynchronizedConfiguration {
+public class SynchronizedConfiguration {
 
 
     private final JobBuilderFactory jobBuilderFactory;
@@ -80,14 +81,18 @@ public class NotSynchronizedConfiguration {
 
     @Bean
     @StepScope
-    public JdbcCursorItemReader<Customer> customerItemReader() {
+    public SynchronizedItemStreamReader<Customer> customerItemReader() {
 
-        return new JdbcCursorItemReaderBuilder<Customer>()
+        JdbcCursorItemReader<Customer> notSafetyReader = new JdbcCursorItemReaderBuilder<Customer>()
                 .fetchSize(60)
                 .dataSource(dataSource)
                 .rowMapper(new BeanPropertyRowMapper<>(Customer.class))
                 .sql("select id, firstName,lastName , birthdate from customer")
                 .name("NotSafetyReader")
+                .build();
+
+        return new SynchronizedItemStreamReaderBuilder<Customer>()
+                .delegate(notSafetyReader)
                 .build();
     }
 
@@ -111,4 +116,3 @@ public class NotSynchronizedConfiguration {
     }
 
 }
-*/
